@@ -77,9 +77,9 @@ class World {
     const FALLBACK_DATA = {
           space: { name: 'Museo Demo (Offline)' },
           rooms: [
-              { id: 1, name: 'Lobby',     posX: 0, posY: 0, posZ: 0, width: 20, height: 8, depth: 20, floorMat: 'floor_marble', wallMat: 'wall_stone', ceilingMat: 'ceiling' },
-              { id: 2, name: 'Gallery 1', posX: 0, posY: 0, posZ: 21, width: 16, height: 6, depth: 20, floorMat: 'floor_wood', wallMat: 'wall_plaster', ceilingMat: 'ceiling' },
-              { id: 3, name: 'Gallery 2', posX: 20, posY: 0, posZ: 25, width: 16, height: 6, depth: 16, floorMat: 'floor_onyx', wallMat: 'wall_stone', ceilingMat: 'ceiling' }
+              { id: 1, name: 'Lobby',     posX: 0, posY: 0, posZ: 0, width: 80, height: 8, depth: 80, floorMat: 'floor_marble', wallMat: 'wall_stone', ceilingMat: 'ceiling' },
+              { id: 2, name: 'Gallery 1', posX: 0, posY: 0, posZ: 51, width: 16, height: 6, depth: 20, floorMat: 'floor_wood', wallMat: 'wall_plaster', ceilingMat: 'ceiling' },
+              { id: 3, name: 'Gallery 2', posX: 17, posY: 0, posZ: 51, width: 16, height: 6, depth: 16, floorMat: 'floor_onyx', wallMat: 'wall_stone', ceilingMat: 'ceiling' }
           ],
           connections: [
               { fromRoomId: 1, toRoomId: 2, direction: 'north' },
@@ -133,12 +133,14 @@ class World {
     
     // Basic Environment
     const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), this.scene);
-    hemi.intensity = 0.6;
+    hemi.intensity = 0.78;
+    hemi.diffuse = new BABYLON.Color3(1.0, 0.98, 0.95)
+    hemi.groundColor = new BABYLON.Color3(0.25, 0.25, 0.28)
 
     // Shadow Generator
-    const dir = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(-1, -2, -1), this.scene);
-    dir.position = new BABYLON.Vector3(20, 40, 20);
-    dir.intensity = 0.7;
+    const dir = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(0, -1, 0), this.scene);
+    dir.position = new BABYLON.Vector3(0, 18, 0);
+    dir.intensity = 0.35;
     
     this.shadowGenerator = new BABYLON.ShadowGenerator(1024, dir);
     this.shadowGenerator.useBlurExponentialShadowMap = true;
@@ -541,6 +543,200 @@ class World {
         });
     }
 
+    const lobbyRoom = this.rooms.find((r) => r?.name === 'Lobby')
+    if (lobbyRoom?.root) {
+      const imageFiles = [
+        'I AM CLANCY TOP.png',
+        'PALADIN WALLPAPER - HD @ivan_valido.png',
+        'Paladin Strait - Placeholder @ivan_valido.png',
+        'TOP WALLPAPER 01 - @ivan_valido.png',
+        'TOP WALLPAPER 02 - @ivan_valido.png',
+        'TOP WALLPAPER 03 - @ivan_valido.png',
+        'VERTICAL VERSION POSTER NEW ERA - @ivan_valido.png',
+        'WALLPAPER NEW ERA TOP - @ivan_valido.png',
+        'WALLPAPER Overcompensate Teaser @ivan_valido.png',
+        'cover - I am Clancy - @ivan_valido.png',
+        'img-2.png',
+        'wp15826836.jpg',
+      ]
+
+      const p = lobbyRoom.pos
+      const halfW = lobbyRoom.size.w * 0.5
+      const halfD = lobbyRoom.size.d * 0.5
+      const wallInset = 0.55
+      const ySlots = [2.45, 2.85, 2.6]
+      const xSlots = [-24, 0, 24]
+      const zSlots = [-24, 0, 24]
+
+      const placements = []
+      for (let i = 0; i < imageFiles.length; i++) {
+        const wallIndex = i % 4
+        const slot = Math.floor(i / 4) % 3
+        if (wallIndex === 0) {
+          placements.push({
+            file: imageFiles[i],
+            pos: new BABYLON.Vector3(p.x + xSlots[slot], p.y + ySlots[slot], p.z + halfD - wallInset),
+            rotY: Math.PI,
+          })
+        } else if (wallIndex === 1) {
+          placements.push({
+            file: imageFiles[i],
+            pos: new BABYLON.Vector3(p.x + xSlots[slot], p.y + ySlots[slot], p.z - halfD + wallInset),
+            rotY: 0,
+          })
+        } else if (wallIndex === 2) {
+          placements.push({
+            file: imageFiles[i],
+            pos: new BABYLON.Vector3(p.x + halfW - wallInset, p.y + ySlots[slot], p.z + zSlots[slot]),
+            rotY: Math.PI / 2,
+          })
+        } else {
+          placements.push({
+            file: imageFiles[i],
+            pos: new BABYLON.Vector3(p.x - halfW + wallInset, p.y + ySlots[slot], p.z + zSlots[slot]),
+            rotY: -Math.PI / 2,
+          })
+        }
+      }
+
+      const ceilingY = p.y + lobbyRoom.size.h - 0.35
+      const panelXs = [-24, 0, 24]
+      const panelZs = [-24, 0, 24]
+      for (let ix = 0; ix < panelXs.length; ix++) {
+        for (let iz = 0; iz < panelZs.length; iz++) {
+          const panel = BABYLON.MeshBuilder.CreateBox(`lobby_ceiling_panel_${ix}_${iz}`, { width: 10, height: 0.06, depth: 3.2 }, this.scene)
+          panel.position.set(p.x + panelXs[ix], ceilingY, p.z + panelZs[iz])
+          panel.parent = lobbyRoom.root
+          panel.isPickable = false
+          const pm = new BABYLON.PBRMaterial(`lobby_ceiling_panel_mat_${ix}_${iz}`, this.scene)
+          pm.albedoColor = BABYLON.Color3.FromHexString('#0a0a0a')
+          pm.emissiveColor = new BABYLON.Color3(1.0, 0.95, 0.88)
+          pm.roughness = 0.9
+          pm.metallic = 0.0
+          panel.material = pm
+
+          const spot = new BABYLON.SpotLight(`lobby_ceiling_spot_${ix}_${iz}`, panel.position.clone().add(new BABYLON.Vector3(0, -0.1, 0)), new BABYLON.Vector3(0, -1, 0), Math.PI / 2.2, 2, this.scene)
+          spot.intensity = 0.75
+          spot.diffuse = new BABYLON.Color3(1.0, 0.96, 0.9)
+          spot.specular = new BABYLON.Color3(0.15, 0.15, 0.15)
+          spot.parent = lobbyRoom.root
+        }
+      }
+
+      const ledY = p.y + 0.08
+      const ledInset = 0.9
+      const ledMat = new BABYLON.PBRMaterial('lobby_led_mat', this.scene)
+      ledMat.albedoColor = BABYLON.Color3.FromHexString('#05060a')
+      ledMat.emissiveColor = new BABYLON.Color3(0.25, 0.65, 1.0)
+      ledMat.roughness = 1.0
+      ledMat.metallic = 0.0
+      const ledNorth = BABYLON.MeshBuilder.CreateBox('lobby_led_north', { width: lobbyRoom.size.w - 6, height: 0.08, depth: 0.12 }, this.scene)
+      ledNorth.position.set(p.x, ledY, p.z + halfD - ledInset)
+      ledNorth.parent = lobbyRoom.root
+      ledNorth.isPickable = false
+      ledNorth.material = ledMat
+      const ledSouth = BABYLON.MeshBuilder.CreateBox('lobby_led_south', { width: lobbyRoom.size.w - 6, height: 0.08, depth: 0.12 }, this.scene)
+      ledSouth.position.set(p.x, ledY, p.z - halfD + ledInset)
+      ledSouth.parent = lobbyRoom.root
+      ledSouth.isPickable = false
+      ledSouth.material = ledMat
+      const ledEast = BABYLON.MeshBuilder.CreateBox('lobby_led_east', { width: 0.12, height: 0.08, depth: lobbyRoom.size.d - 6 }, this.scene)
+      ledEast.position.set(p.x + halfW - ledInset, ledY, p.z)
+      ledEast.parent = lobbyRoom.root
+      ledEast.isPickable = false
+      ledEast.material = ledMat
+      const ledWest = BABYLON.MeshBuilder.CreateBox('lobby_led_west', { width: 0.12, height: 0.08, depth: lobbyRoom.size.d - 6 }, this.scene)
+      ledWest.position.set(p.x - halfW + ledInset, ledY, p.z)
+      ledWest.parent = lobbyRoom.root
+      ledWest.isPickable = false
+      ledWest.material = ledMat
+
+      const createFramedImage = ({ file, pos, rotY }) => {
+        const url = `textures/imagenes%20prueba/${encodeURIComponent(file)}`
+        const plane = BABYLON.MeshBuilder.CreatePlane(`lobby_img_${file}`, { size: 1 }, this.scene)
+        plane.position.copyFrom(pos)
+        plane.rotation.y = rotY
+        plane.isPickable = true
+        plane.parent = lobbyRoom.root
+
+        const frame = BABYLON.MeshBuilder.CreateBox(`lobby_frame_${file}`, { width: 1, height: 1, depth: 0.08 }, this.scene)
+        frame.position.copyFrom(pos)
+        frame.rotation.y = rotY
+        frame.checkCollisions = true
+        frame.parent = lobbyRoom.root
+        this.physics.registerMesh(frame, CollisionLayers.STATIC, CollisionLayers.PLAYER | CollisionLayers.DYNAMIC, { isStatic: true })
+
+        const mat = new BABYLON.PBRMaterial(`lobby_img_mat_${file}`, this.scene)
+        const tex = new BABYLON.Texture(url, this.scene, true, false)
+        mat.albedoTexture = tex
+        mat.emissiveTexture = tex
+        mat.emissiveColor = new BABYLON.Color3(1, 1, 1)
+        mat.roughness = 0.92
+        mat.metallic = 0.02
+        mat.backFaceCulling = false
+        plane.material = mat
+
+        const frameMat = new BABYLON.PBRMaterial(`lobby_frame_mat_${file}`, this.scene)
+        frameMat.albedoColor = BABYLON.Color3.FromHexString('#1a1410')
+        frameMat.roughness = 0.85
+        frameMat.metallic = 0.25
+        frame.material = frameMat
+
+        const nx = Math.sin(rotY)
+        const nz = Math.cos(rotY)
+        frame.position.x += nx * 0.03
+        frame.position.z += nz * 0.03
+        plane.position.x += nx * 0.09
+        plane.position.z += nz * 0.09
+
+        const applySize = () => {
+          const s = tex.getSize()
+          const w = Number(s?.width) || 1024
+          const h = Number(s?.height) || 1024
+          const meterPerPixel = 0.0012
+          let mw = w * meterPerPixel
+          let mh = h * meterPerPixel
+          const maxW = 7.5
+          const maxH = 3.4
+          const k = Math.min(maxW / mw, maxH / mh, 1)
+          mw *= k
+          mh *= k
+          plane.scaling.x = mw
+          plane.scaling.y = mh
+          frame.scaling.x = mw + 0.18
+          frame.scaling.y = mh + 0.18
+
+          const lightPos = plane.position.clone()
+          lightPos.y += 2.1
+          lightPos.x -= nx * 1.1
+          lightPos.z -= nz * 1.1
+          const dir = plane.position.subtract(lightPos)
+          if (dir.lengthSquared() > 0.0001) dir.normalize()
+          const spot = new BABYLON.SpotLight(`lobby_img_spot_${file}`, lightPos, dir, Math.PI / 3.2, 2, this.scene)
+          spot.intensity = 1.65
+          spot.diffuse = new BABYLON.Color3(1, 0.97, 0.92)
+          spot.specular = new BABYLON.Color3(0.35, 0.35, 0.35)
+          spot.parent = lobbyRoom.root
+        }
+
+        if (tex.onLoadObservable) {
+          tex.onLoadObservable.addOnce(() => applySize())
+        } else {
+          setTimeout(() => applySize(), 0)
+        }
+
+        registerArtwork({
+          mesh: plane,
+          title: file,
+          description: '',
+          triggerRadius: 3.2,
+          cinematicRadius: 7.5,
+        })
+      }
+
+      placements.forEach((pl) => createFramedImage(pl))
+    }
+
     // Check for overlaps
     const roomAabbs = this.rooms.map((r) => buildRoomAABB({ name: r.name, pos: r.pos, size: r.size }))
     const overlaps = this.physics.validateNoOverlaps(roomAabbs, 0.0001)
@@ -562,9 +758,9 @@ class World {
   }
 
   createParticleExhibitors() {
-      // Lobby is at 0,0,0. Radius ~8 to fit in 20x20 room
-      const center = new BABYLON.Vector3(0, 0, 0);
-      const radius = 6;
+      const lobbyRoom = this.rooms.find((r) => r?.name === 'Lobby')
+      const center = lobbyRoom?.pos ? lobbyRoom.pos.clone() : new BABYLON.Vector3(0, 0, 0);
+      const radius = lobbyRoom?.size ? Math.max(6, Math.min(lobbyRoom.size.w, lobbyRoom.size.d) * 0.22) : 6;
       const count = 10;
       
       for (let i = 0; i < count; i++) {
